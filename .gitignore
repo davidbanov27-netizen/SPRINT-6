@@ -1,0 +1,38 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Резултат от компилиране
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+publish/
+*.pdb
+
+# Тестове и покритие
+TestResults/
+*.trx
+*.coverage
+
+# Лог файлове и временни файлове
+*.log
+*.tmp
+~$*
+
+# Данни на приложението (не се качват в хранилището)
+library.json
+
+# ReSharper / Rider
+_ReSharper*/
+.idea/
+
+# Операционна система
+Thumbs.db
+.DS_Store
