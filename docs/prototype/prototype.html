@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Прототип – Училищна библиотека</title>
+<style>
+  :root{
+    --bg:#f3f4f6; --panel:#ffffff; --side:#1f2a44; --side2:#2d3b5e; --accent:#2563eb;
+    --ok:#15803d; --okbg:#dcfce7; --err:#b91c1c; --errbg:#fee2e2; --warn:#b45309; --warnbg:#fef3c7;
+    --text:#111827; --muted:#6b7280; --line:#d1d5db;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:#cbd5e1;color:var(--text);font-size:14px}
+  .window{max-width:1100px;height:calc(100vh - 24px);margin:12px auto;background:var(--bg);border:1px solid #64748b;border-radius:6px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.2)}
+  .titlebar{background:#e5e7eb;border-bottom:1px solid var(--line);padding:6px 12px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+  .titlebar .btns span{display:inline-block;width:12px;height:12px;border-radius:50%;margin-left:6px;background:#9ca3af}
+  .body{flex:1;display:flex;min-height:0}
+  nav{width:190px;background:var(--side);color:#fff;padding:12px 0;overflow:auto;flex-shrink:0}
+  nav .who{padding:0 14px 12px;border-bottom:1px solid var(--side2);margin-bottom:8px;font-size:12px;color:#cbd5e1}
+  nav .who b{color:#fff;font-size:14px;display:block}
+  nav button{display:block;width:100%;text-align:left;background:none;border:0;color:#e2e8f0;padding:10px 16px;font-size:14px;cursor:pointer;border-left:4px solid transparent}
+  nav button:hover{background:var(--side2)}
+  nav button.active{background:var(--side2);border-left-color:#60a5fa;font-weight:600;color:#fff}
+  nav .logout{margin-top:16px;color:#fca5a5}
+  main{flex:1;padding:20px 24px;overflow:auto}
+  h2{margin:0 0 14px;font-size:20px}
+  h3{margin:18px 0 8px;font-size:15px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:14px}
+  label{display:block;font-weight:600;margin:10px 0 4px}
+  input,select,textarea{font:inherit;padding:7px 9px;border:1px solid #9ca3af;border-radius:4px;background:#fff;min-width:240px}
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  button.btn{font:inherit;padding:8px 16px;border-radius:4px;border:1px solid #9ca3af;background:#f9fafb;cursor:pointer}
+  button.btn:hover{background:#eef2f7}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button.primary:hover{background:#1d4ed8}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .msg{padding:10px 12px;border-radius:4px;margin:10px 0;border:1px solid}
+  .msg.ok{background:var(--okbg);border-color:#86efac;color:var(--ok)}
+  .msg.err{background:var(--errbg);border-color:#fca5a5;color:var(--err)}
+  .msg.warn{background:var(--warnbg);border-color:#fcd34d;color:var(--warn)}
+  .msg.info{background:#e0ecff;border-color:#93c5fd;color:#1e40af}
+  table{width:100%;border-collapse:collapse;background:#fff}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+  th{background:#f1f5f9;font-size:13px}
+  tr.sel{background:#dbeafe}
+  tbody tr.click{cursor:pointer}
+  tbody tr.click:hover{background:#eff6ff}
+  .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600}
+  .tag.ok{background:var(--okbg);color:var(--ok)}
+  .tag.err{background:var(--errbg);color:var(--err)}
+  .tag.warn{background:var(--warnbg);color:var(--warn)}
+  .muted{color:var(--muted)}
+  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:6px;padding:14px}
+  .stat b{font-size:26px;display:block}
+  .bar{background:#bfdbfe;height:16px;border-radius:3px}
+  .login{max-width:380px;margin:60px auto}
+  .note{font-size:12px;color:var(--muted);margin-top:8px}
+  .banner{background:#fef9c3;border-bottom:1px solid #facc15;padding:5px 12px;font-size:12px;text-align:center}
+  @media (max-width:700px){nav{width:140px}main{padding:12px}}
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar"><span>📚 Училищна библиотека — ПРОТОТИП (примерни данни)</span><span class="btns"><span></span><span></span><span></span></span></div>
+  <div class="banner">Това е кликаем прототип за тест на навигацията. Данните не се запазват.</div>
+  <div class="body" id="app"></div>
+</div>
+
+<script>
+// ===== Примерни данни =====
+const TODAY = new Date(2026, 10, 12); // 12.11.2026
+const fmt = d => d.toLocaleDateString('bg-BG',{day:'2-digit',month:'2-digit',year:'numeric'});
+const addDays = (d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const daysBetween=(a,b)=>Math.round((a-b)/86400000);
+
+let books = [
+  {id:1,title:"Под игото",author:"Иван Вазов",genre:"Роман",age:"8–12 клас",total:3,desc:"Роман за Априлското въстание.",shelf:"А-12",readonly:false},
+  {id:2,title:"Хари Потър и философския камък",author:"Дж. К. Роулинг",genre:"Фентъзи",age:"5–8 клас",total:2,desc:"Момче открива, че е магьосник.",shelf:"Б-03",readonly:false},
+  {id:3,title:"Островът на съкровищата",author:"Р. Л. Стивънсън",genre:"Приключения",age:"5–7 клас",total:2,desc:"Пирати, карта и съкровище.",shelf:"Б-07",readonly:false},
+  {id:4,title:"Тримата мускетари",author:"Александър Дюма",genre:"Приключения",age:"6–9 клас",total:1,desc:"Приключения във Франция на 17. век.",shelf:"Б-09",readonly:false},
+  {id:5,title:"Малкият принц",author:"А. дьо Сент-Екзюпери",genre:"Приказка",age:"3–7 клас",total:2,desc:"Философска приказка за дружбата.",shelf:"В-01",readonly:false},
+  {id:6,title:"Български тълковен речник",author:"Колектив",genre:"Справочник",age:"Всички",total:1,desc:"Само за четене в библиотеката.",shelf:"Р-01",readonly:true}
+];
+let readers = [
+  {id:101,name:"Иван Петров",cls:"7Б",role:"ученик"},
+  {id:102,name:"Мария Георгиева",cls:"6А",role:"ученик"},
+  {id:103,name:"Георги Димитров",cls:"8В",role:"ученик"},
+  {id:104,name:"Елена Стоянова",cls:"Учител",role:"учител"}
+];
+// активни заемания: bookId, readerId, due
+let loans = [
+  {id:1,book:1,reader:101,due:addDays(TODAY,8)},
+  {id:2,book:2,reader:101,due:addDays(TODAY,-7)},
+  {id:3,book:3,reader:102,due:addDays(TODAY,5)},
+  {id:4,book:5,reader:102,due:addDays(TODAY,3)},
+  {id:5,book:4,reader:102,due:addDays(TODAY,9)},
+  {id:6,book:2,reader:103,due:addDays(TODAY,-20)}
+];
+let nextLoan=7;
+let history=[]; // връщания
+
+// ===== Помощни =====
+const getBook=id=>books.find(b=>b.id===id);
+const getReader=id=>readers.find(r=>r.id===id);
+const available=b=>b.total-loans.filter(l=>l.book===b.id).length;
+const readerLoans=id=>loans.filter(l=>l.reader===id);
+const isOverdue=l=>l.due<TODAY;
+const limitOf=r=>r.role==='учител'?5:3;
+const state={role:null,page:null,ui:{}};
+
+const navLib=[['dash','Табло'],['catalog','Каталог'],['readers','Читатели'],['loan','Заемане'],['ret','Връщане'],['overdue','Просрочени'],['stats','Статистика']];
+const navRead=[['search','Търсене'],['recs','Препоръки'],['mybooks','Моите книги']];
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+// ===== Рендериране =====
+function render(){
+  const app=document.getElementById('app');
+  if(!state.role){app.innerHTML=loginView();return;}
+  const nav=state.role==='lib'?navLib:navRead;
+  const who=state.role==='lib'?'Библиотекар':'Читател: '+getReader(state.ui.readerId||101).name;
+  app.innerHTML=`<nav><div class="who"><b>${esc(who)}</b>${state.role==='lib'?'Режим „Библиотекар“':'Режим „Читател“'}</div>`+
+    nav.map(([k,l])=>`<button class="${state.page===k?'active':''}" onclick="go('${k}')">${l}</button>`).join('')+
+    `<button class="logout" onclick="logout()">Изход</button></nav><main id="main">${view()}</main>`;
+}
+function go(p){state.page=p;state.ui.msg=null;state.ui.step={};render();}
+function logout(){state.role=null;state.page=null;state.ui={};render();}
+
+function loginView(){
+  return `<main style="width:100%"><div class="login card"><h2>Вход в системата</h2>
+   <label for="rl">Влизам като</label>
+   <select id="rl" onchange="document.getElementById('rd').style.display=this.value==='read'?'block':'none'">
+     <option value="lib">Библиотекар</option><option value="read">Читател (ученик)</option></select>
+   <div id="rd" style="display:none"><label for="rn">Читателски номер</label>
+     <select id="rn">${readers.map(r=>`<option value="${r.id}">${r.id} – ${esc(r.name)}</option>`).join('')}</select></div>
+   <label for="pw">Парола</label><input id="pw" type="password" value="••••••" disabled>
+   <p class="note">В прототипа паролата не се проверява.</p>
+   <div style="margin-top:14px"><button class="btn primary" onclick="doLogin()">Вход</button></div></div></main>`;
+}
+function doLogin(){
+  const r=document.getElementById('rl').value;
+  state.role=r; state.ui={};
+  if(r==='read'){state.ui.readerId=+document.getElementById('rn').value;state.page='search';}
+  else state.page='dash';
+  render();
+}
+
+function view(){
+  const p=state.page;
+  return ({dash,catalog,readersV,loan,ret,overdue,stats,search,recs,mybooks}[p]||(()=>''))();
+}
+const msgHtml=()=>state.ui.msg?`<div class="msg ${state.ui.msg.t}">${state.ui.msg.m}</div>`:'';
+const setMsg=(t,m)=>{state.ui.msg={t,m};};
+
+// ===== Екрани: библиотекар =====
+function dash(){
+  const od=loans.filter(isOverdue).length;
+  return `<h2>Табло</h2>${msgHtml()}
+  <div class="grid3">
+   <div class="stat"><b>${books.reduce((s,b)=>s+b.total,0)}</b>екземпляра в каталога</div>
+   <div class="stat"><b>${loans.length}</b>активни заемания</div>
+   <div class="stat"><b style="color:${od?'var(--err)':'var(--ok)'}">${od}</b>просрочени книги</div>
+  </div>
+  <h3>Бързи действия</h3>
+  <div class="row"><button class="btn primary" onclick="go('loan')">Заемане</button>
+  <button class="btn primary" onclick="go('ret')">Връщане</button>
+  <button class="btn" onclick="go('catalog')">Каталог</button></div>
+  <h3>Напомняния за днес</h3>
+  <div class="card">${od?loans.filter(isOverdue).map(l=>`<div>⚠ ${esc(getReader(l.reader).name)} (${esc(getReader(l.reader).cls)}) – „${esc(getBook(l.book).title)}“, закъснение ${daysBetween(TODAY,l.due)} дни</div>`).join(''):'Няма напомняния.'}</div>`;
+}
+
+function catalog(){
+  const q=(state.ui.cq||'').toLowerCase();
+  const list=books.filter(b=>!q||(b.title+b.author+b.genre).toLowerCase().includes(q));
+  const sel=state.ui.bookSel?getBook(state.ui.bookSel):null;
+  return `<h2>Каталог</h2>${msgHtml()}
+  <div class="row"><input placeholder="Търси по заглавие, автор, жанр" value="${esc(state.ui.cq||'')}" oninput="state.ui.cq=this.value;rerenderKeep('cq')" id="cq">
+  <button class="btn primary" onclick="state.ui.addBook=true;render()">+ Нова книга</button></div>
+  ${state.ui.addBook?addBookForm():''}
+  <h3>Книги (${list.length})</h3>
+  <table><thead><tr><th>Заглавие</th><th>Автор</th><th>Жанр</th><th>Налични</th></tr></thead><tbody>
+  ${list.map(b=>`<tr class="click ${sel&&sel.id===b.id?'sel':''}" onclick="state.ui.bookSel=${b.id};render()"><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${available(b)} / ${b.total}</td></tr>`).join('')||'<tr><td colspan="4">Няма намерени книги.</td></tr>'}
+  </tbody></table>
+  ${sel?`<div class="card" style="margin-top:12px"><h3 style="margin-top:0">${esc(sel.title)}</h3><div>${esc(sel.author)} · ${esc(sel.genre)} · ${esc(sel.age)}</div><p>${esc(sel.desc)}</p><div class="muted">Рафт: ${esc(sel.shelf)} · Налични: ${available(sel)} от ${sel.total}${sel.readonly?' · само за четене в библиотеката':''}</div></div>`:''}`;
+}
+function addBookForm(){
+  return `<div class="card" style="margin-top:12px"><h3 style="margin-top:0">Нова книга</h3>
+  <div class="row"><div><label>Заглавие *</label><input id="nb_t"></div><div><label>Автор *</label><input id="nb_a"></div></div>
+  <div class="row"><div><label>Жанр</label><input id="nb_g"></div><div><label>Брой копия</label><input id="nb_n" type="number" value="1" min="1" style="min-width:100px"></div></div>
+  <div id="nb_err"></div>
+  <div class="row" style="margin-top:12px"><button class="btn" onclick="state.ui.addBook=false;render()">Отказ</button><button class="btn primary" onclick="saveBook()">Запази</button></div></div>`;
+}
+function saveBook(){
+  const t=document.getElementById('nb_t').value.trim(),a=document.getElementById('nb_a').value.trim();
+  if(!t||!a){document.getElementById('nb_err').innerHTML='<div class="msg err">Попълнете заглавие и автор.</div>';return;}
+  books.push({id:books.length+1,title:t,author:a,genre:document.getElementById('nb_g').value||'—',age:'—',total:+document.getElementById('nb_n').value||1,desc:'',shelf:'—',readonly:false});
+  state.ui.addBook=false;setMsg('ok','Книгата „'+esc(t)+'“ е добавена.');render();
+}
+
+function readersV(){
+  return `<h2>Читатели</h2>${msgHtml()}
+  <table><thead><tr><th>№</th><th>Име</th><th>Клас / роля</th><th>Заети</th><th>Статус</th></tr></thead><tbody>
+  ${readers.map(r=>{const rl=readerLoans(r.id);const od=rl.some(isOverdue);return `<tr><td>${r.id}</td><td>${esc(r.name)}</td><td>${esc(r.cls)}</td><td>${rl.length} / ${limitOf(r)}</td><td>${od?'<span class="tag err">Има просрочена</span>':'<span class="tag ok">В ред</span>'}</td></tr>`}).join('')}
+  </tbody></table>
+  <h3>Нов читател</h3>
+  <div class="card"><div class="row"><div><label>Име *</label><input id="nr_n"></div><div><label>Клас *</label><input id="nr_c" style="min-width:120px"></div></div>
+  <div id="nr_err"></div><div style="margin-top:12px"><button class="btn primary" onclick="saveReader()">Запази</button></div></div>`;
+}
+function saveReader(){
+  const n=document.getElementById('nr_n').value.trim(),c=document.getElementById('nr_c').value.trim();
+  if(!n||!c){document.getElementById('nr_err').innerHTML='<div class="msg err">Попълнете име и клас.</div>';return;}
+  const id=Math.max(...readers.map(r=>r.id))+1;
+  readers.push({id,name:n,cls:c,role:'ученик'});setMsg('ok','Читателят е регистриран с номер '+id+'.');render();
+}
+
+// ----- Заемане -----
+function loan(){
+  const s=state.ui.loan||(state.ui.loan={});
+  const r=s.reader?getReader(s.reader):null, b=s.book?getBook(s.book):null;
+  let rInfo='',bInfo='',checks=[],canConfirm=false;
+  if(r){const rl=readerLoans(r.id),od=rl.filter(isOverdue);
+    rInfo=`<div class="msg info">${esc(r.name)} · ${esc(r.cls)} · заети: ${rl.length} от ${limitOf(r)} · ${od.length?'<b>има просрочена книга</b>':'няма просрочени ✔'}</div>`;}
+  if(b){bInfo=`<div class="msg info">„${esc(b.title)}“ · налични: ${available(b)} от ${b.total}</div>`;}
+  if(r&&b){
+    const rl=readerLoans(r.id);
+    if(b.readonly)checks.push('Книгата е само за четене в библиотеката и не може да се изнася.');
+    if(available(b)<1)checks.push('Няма налично копие.');
+    if(rl.length>=limitOf(r))checks.push('Достигнат лимит от '+limitOf(r)+' книги.');
+    if(rl.some(isOverdue)){const o=rl.find(isOverdue);checks.push('Читателят има просрочена книга: „'+esc(getBook(o.book).title)+'“ (срок '+fmt(o.due)+'). Върнете я, за да заемете нова.');}
+    if(rl.some(l=>l.book===b.id))checks.push('Читателят вече има това заглавие.');
+    canConfirm=checks.length===0;
+  }
+  return `<h2>Заемане на книга</h2>${msgHtml()}
+  <div class="card"><label for="lr">1. Читател</label>
+   <div class="row"><select id="lr" onchange="loanPick('reader',this.value)"><option value="">— изберете читател —</option>${readers.map(x=>`<option value="${x.id}" ${s.reader===x.id?'selected':''}>${x.id} – ${esc(x.name)} (${esc(x.cls)})</option>`).join('')}</select></div>${rInfo}
+   <label for="lb">2. Книга</label>
+   <div class="row"><select id="lb" onchange="loanPick('book',this.value)"><option value="">— изберете книга —</option>${books.map(x=>`<option value="${x.id}" ${s.book===x.id?'selected':''}>${esc(x.title)} (налични ${available(x)})</option>`).join('')}</select></div>${bInfo}
+   ${checks.length?`<div class="msg err"><b>Заемането не може да бъде потвърдено:</b><br>${checks.map(c=>'• '+c).join('<br>')}<div style="margin-top:8px"><button class="btn" onclick="go('ret')">Към „Връщане“</button></div></div>`:''}
+   ${canConfirm?`<div class="msg ok">Всички проверки са преминати. Срок за връщане: <b>${fmt(addDays(TODAY,14))}</b></div>`:''}
+  </div>
+  <div class="row"><button class="btn" onclick="state.ui.loan={};state.ui.msg=null;render()">Отказ</button>
+  <button class="btn primary" ${canConfirm?'':'disabled'} onclick="confirmLoan()">Потвърди заемането</button></div>`;
+}
+function loanPick(k,v){state.ui.loan[k]=v?+v:null;state.ui.msg=null;render();}
+function confirmLoan(){
+  const s=state.ui.loan;const due=addDays(TODAY,14);
+  loans.push({id:nextLoan++,book:s.book,reader:s.reader,due});
+  setMsg('ok',`Заемането е записано: „${esc(getBook(s.book).title)}“ → ${esc(getReader(s.reader).name)}. Срок: ${fmt(due)}.`);
+  state.ui.loan={};render();
+}
+
+// ----- Връщане -----
+function ret(){
+  const s=state.ui.ret||(state.ui.ret={});
+  const rl=s.reader?readerLoans(s.reader):[];
+  const sel=s.loan?loans.find(l=>l.id===s.loan):null;
+  return `<h2>Връщане на книга</h2>${msgHtml()}
+  <div class="card"><label for="rr">Читател</label>
+   <select id="rr" onchange="state.ui.ret={reader:this.value?+this.value:null};state.ui.msg=null;render()"><option value="">— изберете читател —</option>${readers.map(x=>`<option value="${x.id}" ${s.reader===x.id?'selected':''}>${x.id} – ${esc(x.name)} (${esc(x.cls)})</option>`).join('')}</select>
+   ${s.reader?`<h3>Активни заемания</h3>${rl.length?`<table><thead><tr><th>Книга</th><th>Срок</th><th>Статус</th></tr></thead><tbody>${rl.map(l=>`<tr class="click ${s.loan===l.id?'sel':''}" onclick="state.ui.ret.loan=${l.id};render()"><td>${esc(getBook(l.book).title)}</td><td>${fmt(l.due)}</td><td>${isOverdue(l)?`<span class="tag err">Просрочена (${daysBetween(TODAY,l.due)} дни)</span>`:'<span class="tag ok">В срок</span>'}</td></tr>`).join('')}</tbody></table>`:'<div class="msg warn">Няма активни заемания за този читател.</div>'}`:''}
+   ${sel?`<label>Състояние на книгата</label>
+   <div class="row"><label style="font-weight:400;margin:0"><input type="radio" name="cond" value="Добро" checked style="min-width:0"> Добро</label>
+   <label style="font-weight:400;margin:0"><input type="radio" name="cond" value="Повредена" style="min-width:0"> Повредена</label>
+   <label style="font-weight:400;margin:0"><input type="radio" name="cond" value="Загубена" style="min-width:0"> Загубена</label></div>`:''}
+  </div>
+  <div class="row"><button class="btn" onclick="state.ui.ret={};state.ui.msg=null;render()">Отказ</button>
+  <button class="btn primary" ${sel?'':'disabled'} onclick="confirmReturn()">Потвърди връщането</button></div>
+  ${!sel&&s.reader&&rl.length?'<p class="note">Изберете реда със заемането, което се връща.</p>':''}`;
+}
+function confirmReturn(){
+  const s=state.ui.ret;const l=loans.find(x=>x.id===s.loan);
+  const cond=(document.querySelector('input[name=cond]:checked')||{}).value||'Добро';
+  const late=isOverdue(l)?daysBetween(TODAY,l.due):0;
+  loans=loans.filter(x=>x.id!==l.id);
+  history.push({...l,returned:TODAY,cond});
+  const b=getBook(l.book);
+  if(cond!=='Добро'){b.total-=1;} // повредена/загубена копие излиза от наличността
+  let m=`Връщането е записано: „${esc(b.title)}“ (${cond}).`;
+  if(late)m+=` Закъснение: ${late} дни.`;
+  if(cond!=='Добро')m+=' Копието е изключено от наличността.';
+  const still=readerLoans(l.reader).some(isOverdue);
+  if(late&&!still)m+=' Блокировката на читателя е снета.';
+  setMsg(late?'warn':'ok',m);
+  state.ui.ret={reader:s.reader};render();
+}
+
+function overdue(){
+  const od=loans.filter(isOverdue).sort((a,b)=>a.due-b.due);
+  return `<h2>Просрочени книги</h2>
+  ${od.length?`<table><thead><tr><th>Читател</th><th>Клас</th><th>Книга</th><th>Срок</th><th>Дни просрочие</th></tr></thead><tbody>${od.map(l=>`<tr><td>${esc(getReader(l.reader).name)}</td><td>${esc(getReader(l.reader).cls)}</td><td>${esc(getBook(l.book).title)}</td><td>${fmt(l.due)}</td><td><span class="tag err">${daysBetween(TODAY,l.due)}</span></td></tr>`).join('')}</tbody></table>`:'<div class="msg ok">Няма просрочени книги.</div>'}`;
+}
+
+function stats(){
+  const counts={};[...loans,...history].forEach(l=>counts[l.book]=(counts[l.book]||0)+1);
+  const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const max=top.length?top[0][1]:1;
+  const months=[['Авг',6],['Сеп',14],['Окт',19],['Ное',loans.length+history.length]];
+  const mm=Math.max(...months.map(m=>m[1]));
+  return `<h2>Статистика</h2>
+  <div class="card"><h3 style="margin-top:0">Най-заеманите книги</h3>${top.map(([id,c])=>`<div class="row" style="margin:6px 0"><div style="width:240px">${esc(getBook(+id).title)}</div><div class="bar" style="width:${c/max*200}px"></div><b>${c}</b></div>`).join('')}</div>
+  <div class="card"><h3 style="margin-top:0">Заемания по месеци (примерни данни)</h3>${months.map(([m,c])=>`<div class="row" style="margin:6px 0"><div style="width:60px">${m}</div><div class="bar" style="width:${c/mm*300}px"></div><b>${c}</b></div>`).join('')}</div>
+  <div class="card"><b>Просрочени сега:</b> ${loans.filter(isOverdue).length}</div>`;
+}
+
+// ===== Екрани: читател =====
+function bookRow(b,why){
+  const a=available(b);
+  return `<tr><td><b>${esc(b.title)}</b><br><span class="muted">${esc(b.author)} · ${esc(b.age)}</span>${why?`<br><span style="color:var(--accent)">Защо: ${esc(why)}</span>`:''}</td><td>${a>0?'<span class="tag ok">налична ✔</span>':'<span class="tag err">няма налично ✖</span>'}<br><span class="muted">Рафт ${esc(b.shelf)}</span></td></tr>`;
+}
+function search(){
+  const s=state.ui.sr||(state.ui.sr={q:'',res:null,mode:null});
+  return `<h2>Какво искаш да прочетеш?</h2>
+  <div class="card"><div class="row"><input id="sq" style="min-width:380px" placeholder="напр. кратка книга за приключения за 6. клас" value="${esc(s.q)}">
+   <button class="btn" onclick="doSearch(false)">Търси по думи</button>
+   <button class="btn primary" onclick="doSearch(true)">Попитай ИИ</button></div></div>
+  ${s.res?`${s.mode==='ai'?'<div class="msg info">Резултати от ИИ търсене (само от наличния каталог).</div>':''}
+   ${s.res.length?`<table><thead><tr><th>Книга</th><th>Наличност</th></tr></thead><tbody>${s.res.map(r=>bookRow(r.b,r.why)).join('')}</tbody></table>`:'<div class="msg warn">Няма намерени книги. Опитай да опишеш с думи какво търсиш и натисни „Попитай ИИ“.</div>'}`:''}`;
+}
+function doSearch(ai){
+  const q=document.getElementById('sq').value.trim();const s=state.ui.sr;s.q=q;s.mode=ai?'ai':'kw';
+  const ql=q.toLowerCase();
+  if(!q){s.res=[];render();return;}
+  if(ai){
+    const words=ql.split(/\s+/);let res=[];
+    books.filter(b=>!b.readonly).forEach(b=>{
+      let sc=0,why=[];
+      if(/приключ/.test(ql)&&b.genre==='Приключения'){sc+=2;why.push('жанр приключения');}
+      if(/фентъзи|магия|магьосн/.test(ql)&&b.genre==='Фентъзи'){sc+=2;why.push('фентъзи');}
+      if(/приказк|принц/.test(ql)&&b.genre==='Приказка'){sc+=2;why.push('приказка');}
+      if(/роман|история|българск/.test(ql)&&b.genre==='Роман'){sc+=2;why.push('роман');}
+      const m=ql.match(/(\d+)\.?\s*клас/);
+      if(m){const g=+m[1];const r=b.age.match(/(\d+)\D+(\d+)/);if(r&&g>=+r[1]&&g<=+r[2]){sc+=1;why.push('подходяща за '+g+'. клас');}}
+      words.forEach(w=>{if(w.length>3&&(b.title+b.desc).toLowerCase().includes(w))sc+=1;});
+      if(sc>0)res.push({b,sc,why:why.join(', ')||'съвпада със заявката'});
+    });
+    s.res=res.sort((a,b)=>b.sc-a.sc);
+  }else{
+    s.res=books.filter(b=>(b.title+' '+b.author+' '+b.genre).toLowerCase().includes(ql)).map(b=>({b,why:''}));
+  }
+  render();
+}
+function recs(){
+  const interests=state.ui.interests||['Приключения'];
+  const items=books.filter(b=>!b.readonly&&interests.includes(b.genre)).slice(0,5);
+  const all=['Приключения','Фентъзи','Приказка','Роман'];
+  return `<h2>Препоръки за теб</h2>
+  <div class="card"><b>Моите интереси:</b> ${all.map(g=>`<label style="display:inline;font-weight:400;margin-right:12px"><input type="checkbox" style="min-width:0" ${interests.includes(g)?'checked':''} onchange="toggleInt('${g}')"> ${g}</label>`).join('')}</div>
+  ${items.length?`<table><thead><tr><th>Книга</th><th>Наличност</th></tr></thead><tbody>${items.map(b=>bookRow(b,'съвпада с интерес „'+b.genre+'“')).join('')}</tbody></table>`:'<div class="msg warn">Избери поне един интерес.</div>'}`;
+}
+function toggleInt(g){
+  const cur=state.ui.interests||['Приключения'];
+  state.ui.interests=cur.includes(g)?cur.filter(x=>x!==g):[...cur,g];render();
+}
+function mybooks(){
+  const rid=state.ui.readerId||101;const rl=readerLoans(rid);
+  return `<h2>Моите книги</h2>
+  ${rl.length?`<table><thead><tr><th>Книга</th><th>Срок</th><th>Статус</th></tr></thead><tbody>${rl.map(l=>`<tr><td>${esc(getBook(l.book).title)}</td><td>${fmt(l.due)}</td><td>${isOverdue(l)?`<span class="tag err">Просрочена (${daysBetween(TODAY,l.due)} дни)</span>`:'<span class="tag ok">В срок</span>'}</td></tr>`).join('')}</tbody></table>`:'<div class="msg info">Нямате заети книги.</div>'}`;
+}
+
+// запазва фокуса при търсене в каталога
+function rerenderKeep(id){
+  const el=document.getElementById(id);const pos=el.selectionStart;render();
+  const n=document.getElementById(id);if(n){n.focus();n.setSelectionRange(pos,pos);}
+}
+render();
+</script>
+</body>
+</html>

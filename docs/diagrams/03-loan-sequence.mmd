@@ -1,0 +1,23 @@
+sequenceDiagram
+    actor Lib as Библиотекар
+    participant V as LoanView
+    participant VM as LoanViewModel
+    participant S as LibraryService
+    participant R as ILibraryRepository
+
+    Lib->>V: избира читател и книга
+    V->>VM: SelectedReader / SelectedBook (binding)
+    VM->>S: CheckLoan(reader, book)
+    S-->>VM: списък с причини за отказ
+    alt има причини за отказ
+        VM-->>V: Problems → червено поле, бутонът е неактивен
+    else всичко е наред
+        VM-->>V: CanConfirm → зелено поле със срока
+        Lib->>V: „Потвърди заемането“
+        V->>VM: ConfirmCommand
+        VM->>S: CreateLoan(reader, book)
+        S->>S: CheckLoan още веднъж
+        S->>R: Save(data)
+        S-->>VM: Loan
+        VM-->>V: съобщение „Заемането е записано“
+    end

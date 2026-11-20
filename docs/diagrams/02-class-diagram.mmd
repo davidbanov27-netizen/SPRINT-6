@@ -1,0 +1,95 @@
+classDiagram
+    direction LR
+
+    class Book {
+        +int Id
+        +string Title
+        +string Author
+        +string Genre
+        +string Isbn
+        +int MinGrade
+        +int MaxGrade
+        +string Shelf
+        +bool ReferenceOnly
+        +bool IsActive
+    }
+    class BookCopy {
+        +int Id
+        +int BookId
+        +string InventoryNumber
+        +CopyStatus Status
+    }
+    class Reader {
+        +int Id
+        +string Name
+        +string ClassName
+        +ReaderRole Role
+    }
+    class Loan {
+        +int Id
+        +int BookId
+        +int ReaderId
+        +DateTime LoanedOn
+        +DateTime DueDate
+        +DateTime ReturnedOn
+        +BookCondition Condition
+    }
+    class LibraryService {
+        +CheckLoan(reader, book)
+        +CreateLoan(reader, book)
+        +ReturnLoan(loan, condition)
+        +SearchKeyword(query)
+        +AddBook() AddReader()
+        +IsOverdue(loan)
+        +Available(book)
+    }
+    class ILibraryRepository {
+        <<interface>>
+        +Load() LibraryData
+        +Save(data)
+    }
+    class DataStore {
+        JSON файл
+    }
+    class IAiSearchService {
+        <<interface>>
+        +SearchAsync(query, catalog)
+    }
+    class LocalAiSearchService
+    class MainViewModel {
+        +CurrentPage
+        +Navigate(key)
+    }
+    class PageViewModel {
+        <<abstract>>
+        +Message
+        +Kind
+    }
+    class LoanViewModel
+    class ReturnViewModel
+    class SearchViewModel
+    class LoanView {
+        <<WPF UserControl>>
+    }
+
+    Book "1" --> "1..*" BookCopy : има екземпляри
+    Reader "1" --> "0..*" Loan : заема
+    BookCopy "1" --> "0..*" Loan : участва в
+    Book "1" --> "0..*" Loan : (сега) се заема
+
+    LibraryService --> ILibraryRepository : чете и записва
+    DataStore ..|> ILibraryRepository
+    LibraryService ..> Book : управлява
+    LibraryService ..> Reader : управлява
+    LibraryService ..> Loan : управлява
+
+    IAiSearchService <|.. LocalAiSearchService
+    PageViewModel <|-- LoanViewModel
+    PageViewModel <|-- ReturnViewModel
+    PageViewModel <|-- SearchViewModel
+    MainViewModel --> PageViewModel : показва
+    LoanViewModel --> LibraryService : ползва
+    ReturnViewModel --> LibraryService : ползва
+    SearchViewModel --> LibraryService : ползва
+    SearchViewModel --> IAiSearchService : ползва
+    LoanView ..> LoanViewModel : DataContext (binding)

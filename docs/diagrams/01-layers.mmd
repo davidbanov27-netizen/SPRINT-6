@@ -1,0 +1,41 @@
+flowchart TB
+    classDef ui fill:#E0ECFF,stroke:#2563EB,color:#111827
+    classDef vm fill:#DCFCE7,stroke:#15803D,color:#111827
+    classDef svc fill:#FEF3C7,stroke:#B45309,color:#111827
+    classDef data fill:#F3E8FF,stroke:#7E22CE,color:#111827
+    classDef model fill:#F3F4F6,stroke:#6B7280,color:#111827
+
+    subgraph L1["1. Интерфейс – Views/ (XAML)"]
+        V["MainWindow · LoginView · DashboardView · CatalogView · ReadersView<br/>LoanView · ReturnView · OverdueView · StatsView<br/>SearchView · RecsView · MyBooksView"]
+    end
+    subgraph L2["2. Логика на екраните – ViewModels/"]
+        MVM["MainViewModel<br/>(вход, меню, навигация)"]
+        PVM["Page ViewModels – по един на екран<br/>(състояние, команди, съобщения)"]
+    end
+    subgraph L3["3. Бизнес логика – Services/"]
+        LS["LibraryService<br/>всички правила BR-01 … BR-15"]
+        AI["IAiSearchService<br/>→ LocalAiSearchService"]
+    end
+    subgraph L4["4. Данни – Services/"]
+        REPO["ILibraryRepository"]
+        DS["DataStore (JSON)"]
+        FILE[("library.json<br/>%LocalAppData%")]
+    end
+    M["Models/<br/>Book · BookCopy · Reader · Loan · LibrarySettings"]
+
+    V -- "binding + команди" --> PVM
+    MVM -- "сменя CurrentPage" --> V
+    MVM --> PVM
+    PVM -- "извиква" --> LS
+    PVM -- "ИИ търсене" --> AI
+    LS -- "Load / Save" --> REPO
+    DS -. "имплементира" .-> REPO
+    DS --> FILE
+    LS --- M
+    PVM --- M
+
+    class V ui
+    class MVM,PVM vm
+    class LS,AI svc
+    class REPO,DS,FILE data
+    class M model
