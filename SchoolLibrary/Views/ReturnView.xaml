@@ -9,7 +9,13 @@
 
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="Читател" Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
+                    <TextBlock Text="Бързо връщане по инвентарен номер" Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox Text="{Binding InventoryInput, UpdateSourceTrigger=PropertyChanged}" MinWidth="200"/>
+                        <Button Content="Намери" Command="{Binding FindByNumberCommand}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="…или изберете читател" Style="{StaticResource FieldLabel}"/>
                     <ComboBox ItemsSource="{Binding Readers}" SelectedItem="{Binding SelectedReader}"
                               DisplayMemberPath="DisplayName"/>
 
@@ -18,6 +24,7 @@
                         <DataGrid ItemsSource="{Binding ActiveLoans}" SelectedItem="{Binding SelectedLoan}">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Книга" Binding="{Binding BookTitle}" Width="2*" ElementStyle="{StaticResource CellText}"/>
+                                <DataGridTextColumn Header="Екземпляр" Binding="{Binding InventoryNumber}" Width="110" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTextColumn Header="Срок" Binding="{Binding DueDate, StringFormat=dd.MM.yyyy}" Width="110" ElementStyle="{StaticResource CellText}"/>
                                 <DataGridTemplateColumn Header="Статус" Width="2*">
                                     <DataGridTemplateColumn.CellTemplate>

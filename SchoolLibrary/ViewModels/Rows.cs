@@ -45,7 +45,10 @@ public sealed record CopyRow(BookCopy Copy)
     public bool IsOnLoan => Copy.Status == CopyStatus.OnLoan;
 }
 
-public sealed record LoanRow(Loan Loan, string BookTitle, string ReaderName, string ClassName, int DaysOverdue, bool NeedsReview)
+/// <summary>Избор на екземпляр при заемане: „автоматично“ (Copy = null) или конкретен свободен екземпляр.</summary>
+public sealed record CopyChoice(BookCopy? Copy, string Label);
+
+public sealed record LoanRow(Loan Loan, string BookTitle, string ReaderName, string ClassName, int DaysOverdue, bool NeedsReview, string InventoryNumber = "")
 {
     public DateTime DueDate => Loan.DueDate;
     public bool IsOverdue => DaysOverdue > 0;
@@ -96,7 +99,7 @@ public static class RowFactory
         var reader = s.GetReader(l.ReaderId);
         var days = s.DaysOverdue(l);
         return new LoanRow(l, book?.Title ?? "?", reader?.Name ?? "?", reader?.ClassName ?? "", days,
-            days > s.Settings.ReviewAfterDays);
+            days > s.Settings.ReviewAfterDays, s.GetCopy(l.CopyId)?.InventoryNumber ?? "");
     }
 
     public static ReaderRow ToReaderRow(LibraryService s, Reader r)

@@ -27,6 +27,12 @@
                         <TextBlock Text="{Binding BookInfo}" Foreground="{StaticResource InfoBrush}" TextWrapping="Wrap"/>
                     </Border>
 
+                    <StackPanel Visibility="{Binding HasCopyChoices, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="3. Екземпляр (инвентарен номер)" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox ItemsSource="{Binding CopyChoices}" SelectedItem="{Binding SelectedCopyChoice}"
+                                  DisplayMemberPath="Label"/>
+                    </StackPanel>
+
                     <!-- Причини за отказ (алтернативни сценарии А2–А6 от UC-01) -->
                     <Border Background="{StaticResource ErrBg}" BorderBrush="{StaticResource ErrBorder}"
                             BorderThickness="1" CornerRadius="4" Padding="12,9" Margin="0,12,0,0"
