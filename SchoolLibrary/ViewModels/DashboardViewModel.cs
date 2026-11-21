@@ -7,7 +7,7 @@ public class DashboardViewModel : PageViewModel
 {
     public DashboardViewModel(LibraryService s, INavigator nav)
     {
-        TotalCopies = s.Books.Sum(b => b.TotalCopies);
+        TotalCopies = s.Books.Sum(b => s.TotalCopies(b));
         ActiveLoans = s.ActiveLoans.Count();
 
         var reminders = new List<string>();

@@ -14,52 +14,55 @@
                 <Button Content="+ Нова книга" Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}"/>
             </StackPanel>
 
-            <!-- Форма за нова книга (LB-01) -->
+            <!-- Форма за нова книга и за редактиране -->
             <Border Style="{StaticResource Card}" Margin="0,12,0,0"
-                    Visibility="{Binding IsAdding, Converter={StaticResource BoolToVis}}">
+                    Visibility="{Binding IsFormOpen, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <TextBlock Text="Нова книга" Style="{StaticResource SectionTitle}" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding FormHeading}" Style="{StaticResource SectionTitle}" Margin="0,0,0,4"/>
                     <WrapPanel>
                         <StackPanel Margin="0,0,16,0">
                             <TextBlock Text="Заглавие *" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Text="{Binding BookTitle, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,16,0">
                             <TextBlock Text="Автор *" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding NewAuthor, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Text="{Binding BookAuthor, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,16,0">
-                            <TextBlock Text="Жанр" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding NewGenre, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="Жанр *" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding BookGenre, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,16,0">
                             <TextBlock Text="ISBN (по избор)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding NewIsbn, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Text="{Binding BookIsbn, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="10 или 13 цифри, с или без тирета"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,16,0">
                             <TextBlock Text="Рафт" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding NewShelf, UpdateSourceTrigger=PropertyChanged}"/>
-                        </StackPanel>
-                        <StackPanel Margin="0,0,16,0">
-                            <TextBlock Text="Брой копия" Style="{StaticResource FieldLabel}"/>
-                            <TextBox MinWidth="90" Width="90" Text="{Binding NewCopies, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Text="{Binding BookShelf, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,16,0">
                             <TextBlock Text="От клас" Style="{StaticResource FieldLabel}"/>
-                            <TextBox MinWidth="90" Width="90" Text="{Binding NewMinGrade, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox MinWidth="90" Width="90" Text="{Binding BookMinGrade, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,16,0">
                             <TextBlock Text="До клас" Style="{StaticResource FieldLabel}"/>
-                            <TextBox MinWidth="90" Width="90" Text="{Binding NewMaxGrade, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox MinWidth="90" Width="90" Text="{Binding BookMaxGrade, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,0"
+                                    Visibility="{Binding IsAddMode, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Брой екземпляри" Style="{StaticResource FieldLabel}"/>
+                            <TextBox MinWidth="120" Width="120" Text="{Binding BookCopies, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="Инвентарните номера се дават автоматично"/>
                         </StackPanel>
                     </WrapPanel>
 
                     <TextBlock Text="Кратко описание" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Text="{Binding NewDescription, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBox Text="{Binding BookDescription, UpdateSourceTrigger=PropertyChanged}"
                              AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54"/>
 
                     <CheckBox Content="Само за четене в библиотеката (не се изнася)" Margin="0,12,0,0"
-                              IsChecked="{Binding NewReferenceOnly}"/>
+                              IsChecked="{Binding BookReferenceOnly}"/>
 
                     <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                         <Button Content="Отказ" Command="{Binding CancelCommand}"/>
@@ -78,7 +81,7 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <!-- Подробности за избраната книга (RD-04) -->
+            <!-- Подробности за избраната книга -->
             <Border Style="{StaticResource Card}" Margin="0,12,0,0"
                     Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
@@ -92,16 +95,60 @@
                     </TextBlock>
                     <TextBlock Text="{Binding SelectedBook.Description}" Margin="0,8,0,0" TextWrapping="Wrap"/>
                     <TextBlock Style="{StaticResource MutedText}" Margin="0,8,0,0">
-                        <Run Text="Рафт: "/>
+                        <Run Text="ISBN: "/>
+                        <Run Text="{Binding SelectedBook.Isbn, Mode=OneWay}"/>
+                        <Run Text=" · Рафт: "/>
                         <Run Text="{Binding SelectedBook.Shelf, Mode=OneWay}"/>
                         <Run Text=" · Налични: "/>
                         <Run Text="{Binding SelectedBook.Available, Mode=OneWay}"/>
                         <Run Text=" от "/>
                         <Run Text="{Binding SelectedBook.Total, Mode=OneWay}"/>
                     </TextBlock>
-                    <Button Content="Премахни от каталога" Command="{Binding DeactivateCommand}"
-                            HorizontalAlignment="Left" Margin="0,12,0,0"
-                            Foreground="{StaticResource ErrBrush}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="Редактирай" Command="{Binding EditCommand}"/>
+                        <Button Content="Премахни от каталога" Command="{Binding DeactivateCommand}"
+                                Foreground="{StaticResource ErrBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Екземпляри на избраната книга -->
+            <Border Style="{StaticResource Card}"
+                    Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="Екземпляри" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
+                    <DataGrid ItemsSource="{Binding Copies}" SelectedItem="{Binding SelectedCopy}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Инвентарен номер" Binding="{Binding InventoryNumber}" Width="*" ElementStyle="{StaticResource CellText}"/>
+                            <DataGridTextColumn Header="Състояние" Binding="{Binding StatusText}" Width="*" ElementStyle="{StaticResource CellText}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Нов екземпляр -->
+                    <TextBlock Text="Нов екземпляр" Style="{StaticResource FieldLabel}" Margin="0,14,0,4"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox Width="220" Margin="0,0,10,0"
+                                 Text="{Binding NewInventoryNumber, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Оставете празно за автоматичен номер, напр. BK-00020"/>
+                        <Button Content="Добави екземпляр" Command="{Binding AddCopyCommand}"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource MutedText}" FontSize="12" Margin="0,4,0,0"
+                               Text="Оставете номера празен, за да се даде автоматичен (BK-00020 …)."/>
+
+                    <!-- Промяна на избрания екземпляр -->
+                    <StackPanel Visibility="{Binding HasSelectedCopy, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="Промяна на избрания екземпляр" Style="{StaticResource FieldLabel}" Margin="0,14,0,4"/>
+                        <StackPanel Orientation="Horizontal" IsEnabled="{Binding SelectedCopyEditable}">
+                            <TextBox Width="220" Margin="0,0,10,0"
+                                     Text="{Binding EditInventoryNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                            <ComboBox ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus}"
+                                      DisplayMemberPath="Label" MinWidth="160" Margin="0,0,10,0"/>
+                            <Button Content="Запази екземпляра" Command="{Binding SaveCopyCommand}"/>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource MutedText}" FontSize="12" Margin="0,4,0,0"
+                                   Visibility="{Binding SelectedCopyLocked, Converter={StaticResource BoolToVis}}"
+                                   Text="Екземплярът е зает и не може да се променя. Първо запишете връщането."/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </StackPanel>

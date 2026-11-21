@@ -7,12 +7,54 @@
             <TextBlock Text="Читатели" Style="{StaticResource PageTitle}"/>
             <local:MessageBanner/>
 
-            <DataGrid ItemsSource="{Binding Readers}">
+            <StackPanel Orientation="Horizontal">
+                <TextBox Width="320" Margin="0,0,10,0"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="Търси по име, читателски номер или клас"/>
+                <Button Content="+ Нов читател" Style="{StaticResource PrimaryButton}" Command="{Binding AddCommand}"/>
+            </StackPanel>
+
+            <!-- Форма за нов читател и за редактиране -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0"
+                    Visibility="{Binding IsFormOpen, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding FormHeading}" Style="{StaticResource SectionTitle}" Margin="0,0,0,4"/>
+                    <WrapPanel>
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Читателски номер" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding CardNumberText, Mode=OneWay}" IsReadOnly="True" Background="#F3F4F6"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Име *" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,0"
+                                    Visibility="{Binding IsStudent, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Клас * (напр. 7Б)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox MinWidth="120" Width="120" Text="{Binding ClassName, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="Контакт (по избор)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding Contact, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="Имейл или телефон"/>
+                        </StackPanel>
+                    </WrapPanel>
+                    <CheckBox Content="Учител" IsChecked="{Binding IsTeacher}" Margin="0,12,0,0"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button Content="Отказ" Command="{Binding CancelCommand}"/>
+                        <Button Content="Запази" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="Читатели" Style="{StaticResource SectionTitle}"/>
+            <DataGrid ItemsSource="{Binding Readers}" SelectedItem="{Binding SelectedReader}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="№" Binding="{Binding Id}" Width="70" ElementStyle="{StaticResource CellText}"/>
+                    <DataGridTextColumn Header="Номер" Binding="{Binding CardNumber}" Width="100" ElementStyle="{StaticResource CellText}"/>
                     <DataGridTextColumn Header="Име" Binding="{Binding Name}" Width="2*" ElementStyle="{StaticResource CellText}"/>
                     <DataGridTextColumn Header="Клас / роля" Binding="{Binding ClassName}" Width="*" ElementStyle="{StaticResource CellText}"/>
-                    <DataGridTextColumn Header="Заети" Binding="{Binding LoansText}" Width="90" ElementStyle="{StaticResource CellText}"/>
+                    <DataGridTextColumn Header="Заети" Binding="{Binding LoansText}" Width="80" ElementStyle="{StaticResource CellText}"/>
                     <DataGridTemplateColumn Header="Статус" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -23,23 +65,41 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <TextBlock Text="Нов читател" Style="{StaticResource SectionTitle}"/>
-            <Border Style="{StaticResource Card}">
+            <!-- Подробности за избрания читател -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0"
+                    Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
-                    <WrapPanel>
-                        <StackPanel Margin="0,0,16,0">
-                            <TextBlock Text="Име *" Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}"/>
-                        </StackPanel>
-                        <StackPanel Margin="0,0,16,0"
-                                    Visibility="{Binding IsStudent, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Клас *" Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
-                            <TextBox MinWidth="120" Width="120" Text="{Binding NewClass, UpdateSourceTrigger=PropertyChanged}"/>
-                        </StackPanel>
-                    </WrapPanel>
-                    <CheckBox Content="Учител" IsChecked="{Binding NewIsTeacher}" Margin="0,12,0,0"/>
-                    <Button Content="Запази" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}"
-                            HorizontalAlignment="Left" Margin="0,14,0,0"/>
+                    <TextBlock Text="{Binding SelectedReader.Name}" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0">
+                        <Run Text="Номер "/>
+                        <Run Text="{Binding SelectedReader.CardNumber, Mode=OneWay}"/>
+                        <Run Text=" · "/>
+                        <Run Text="{Binding SelectedReader.ClassName, Mode=OneWay}"/>
+                        <Run Text=" · Контакт: "/>
+                        <Run Text="{Binding SelectedReader.Contact, Mode=OneWay}"/>
+                    </TextBlock>
+
+                    <StackPanel Visibility="{Binding HasSelectedLoans, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="Заети книги" Style="{StaticResource FieldLabel}" Margin="0,12,0,6"/>
+                        <DataGrid ItemsSource="{Binding SelectedLoans}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Книга" Binding="{Binding BookTitle}" Width="2*" ElementStyle="{StaticResource CellText}"/>
+                                <DataGridTextColumn Header="Срок" Binding="{Binding DueDate, StringFormat=dd.MM.yyyy}" Width="110" ElementStyle="{StaticResource CellText}"/>
+                                <DataGridTemplateColumn Header="Статус" Width="2*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding StatusText}" Style="{StaticResource LoanStatusText}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="Редактирай" Command="{Binding EditCommand}"/>
+                        <Button Content="{Binding ToggleActiveText}" Command="{Binding ToggleActiveCommand}"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </StackPanel>

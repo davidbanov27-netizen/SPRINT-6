@@ -69,7 +69,7 @@
         <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Style.Triggers>
-            <DataTrigger Binding="{Binding HasOverdue}" Value="True">
+            <DataTrigger Binding="{Binding IsProblem}" Value="True">
                 <Setter Property="Foreground" Value="{StaticResource ErrBrush}"/>
             </DataTrigger>
         </Style.Triggers>

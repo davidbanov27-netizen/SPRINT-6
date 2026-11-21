@@ -5,20 +5,44 @@ namespace SchoolLibrary.ViewModels;
 
 // Редовете са прости „само за показване“ обекти, подготвени за DataGrid-овете.
 
-public sealed record BookRow(Book Book, int Available)
+public sealed record BookRow(Book Book, int Available, int Total)
 {
     public int Id => Book.Id;
     public string Title => Book.Title;
     public string Author => Book.Author;
     public string Genre => Book.Genre;
+    public string Isbn => Book.Isbn.Length > 0 ? Book.Isbn : "—";
     public string AgeText => Book.AgeText;
-    public string Shelf => Book.Shelf;
+    public string Shelf => Book.Shelf.Length > 0 ? Book.Shelf : "—";
     public string Description => Book.Description;
-    public int Total => Book.TotalCopies;
     public bool ReferenceOnly => Book.ReferenceOnly;
     public string Availability => $"{Available} / {Total}";
     public bool IsAvailable => Available > 0;
     public string Label => $"{Title} (налични {Available})";
+}
+
+public static class StatusLabels
+{
+    public static string For(CopyStatus status) => status switch
+    {
+        CopyStatus.Available => "Наличен",
+        CopyStatus.OnLoan => "Зает",
+        CopyStatus.Damaged => "Повреден",
+        CopyStatus.Lost => "Загубен",
+        CopyStatus.Withdrawn => "Списан",
+        _ => status.ToString(),
+    };
+}
+
+public sealed record CopyStatusOption(string Label, CopyStatus Value);
+
+public sealed record CopyRow(BookCopy Copy)
+{
+    public int Id => Copy.Id;
+    public string InventoryNumber => Copy.InventoryNumber;
+    public CopyStatus Status => Copy.Status;
+    public string StatusText => StatusLabels.For(Copy.Status);
+    public bool IsOnLoan => Copy.Status == CopyStatus.OnLoan;
 }
 
 public sealed record LoanRow(Loan Loan, string BookTitle, string ReaderName, string ClassName, int DaysOverdue, bool NeedsReview)
@@ -35,10 +59,17 @@ public sealed record LoanRow(Loan Loan, string BookTitle, string ReaderName, str
 public sealed record ReaderRow(Reader Reader, int LoanCount, int Limit, bool HasOverdue)
 {
     public int Id => Reader.Id;
+    public string CardNumber => Reader.CardNumber;
     public string Name => Reader.Name;
     public string ClassName => Reader.ClassName;
+    public string Contact => Reader.Contact.Length > 0 ? Reader.Contact : "—";
+    public bool IsActive => Reader.IsActive;
     public string LoansText => $"{LoanCount} / {Limit}";
-    public string StatusText => HasOverdue ? "Има просрочена" : "В ред";
+
+    /// <summary>Червено оцветяване в таблицата: просрочена книга или неактивен читател.</summary>
+    public bool IsProblem => HasOverdue || !IsActive;
+
+    public string StatusText => !IsActive ? "Неактивен" : HasOverdue ? "Има просрочена" : "В ред";
 }
 
 public sealed record BarRow(string Label, int Value, double BarWidth);
@@ -49,7 +80,7 @@ public sealed record ResultRow(Book Book, string Why, bool IsAvailable)
 {
     public string Title => Book.Title;
     public string Subtitle => $"{Book.Author} · {Book.AgeText}";
-    public string Shelf => $"Рафт {Book.Shelf}";
+    public string Shelf => Book.Shelf.Length > 0 ? $"Рафт {Book.Shelf}" : "";
     public bool HasWhy => Why.Length > 0;
     public string WhyText => $"Защо: {Why}";
     public string AvailabilityText => IsAvailable ? "налична ✔" : "няма налично ✖";
@@ -57,7 +88,7 @@ public sealed record ResultRow(Book Book, string Why, bool IsAvailable)
 
 public static class RowFactory
 {
-    public static BookRow ToBookRow(LibraryService s, Book b) => new(b, s.Available(b));
+    public static BookRow ToBookRow(LibraryService s, Book b) => new(b, s.Available(b), s.TotalCopies(b));
 
     public static LoanRow ToLoanRow(LibraryService s, Loan l)
     {
