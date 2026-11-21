@@ -6,8 +6,7 @@ namespace SchoolLibrary.Services;
 
 /// <summary>
 /// Записва данните в JSON файл в %LocalAppData%\SchoolLibrary\library.json.
-/// Така проектът няма външни NuGet пакети. По-късно може да се замени със SQLite
-/// само чрез нов клас с тези два метода.
+/// По-късно може да се замени със SQLite само чрез нов клас по <see cref="ILibraryRepository"/>.
 /// </summary>
 public class DataStore : ILibraryRepository
 {
@@ -24,7 +23,7 @@ public class DataStore : ILibraryRepository
 
     public string FilePath => _path;
 
-    /// <summary>Съобщение за последната грешка при запис (null, ако всичко е наред).</summary>
+    /// <summary>Съобщение за последната грешка или важна забележка (null = всичко е наред).</summary>
     public string? LastError { get; private set; }
 
     public LibraryData Load()
@@ -34,9 +33,17 @@ public class DataStore : ILibraryRepository
             if (File.Exists(_path))
             {
                 var data = JsonSerializer.Deserialize<LibraryData>(File.ReadAllText(_path), Options);
-                if (data != null && data.Books.Count > 0)
+                if (data != null && data.SchemaVersion == LibraryData.CurrentSchemaVersion && data.Books.Count > 0)
                 {
                     return data;
+                }
+
+                // Файл от по-стара версия (преди екземплярите): пазим го като копие и почваме с чисти данни.
+                if (data != null && data.SchemaVersion < LibraryData.CurrentSchemaVersion)
+                {
+                    var backup = Path.ChangeExtension(_path, ".v" + data.SchemaVersion + ".bak");
+                    File.Copy(_path, backup, overwrite: true);
+                    LastError = "Файлът с данни е от по-стара версия. Копие е запазено като " + backup + ".";
                 }
             }
         }

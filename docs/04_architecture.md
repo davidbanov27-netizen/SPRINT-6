@@ -106,6 +106,7 @@ SchoolLibrary/                      ← корен на хранилището
 │   ├── 02_requirements_and_backlog.md   Етап 2
 │   ├── 03_user_scenarios_and_prototype.md   Етап 3
 │   ├── 04_architecture.md          този документ
+│   ├── 05_books_and_readers.md     Етап 5: книги, екземпляри, читатели, тестове
 │   ├── backlog.md                  актуален backlog
 │   ├── diagrams/                   схемите (.mmd = сорс, .png = за документи)
 │   └── prototype/prototype.html    кликаем прототип от Етап 3
@@ -114,10 +115,12 @@ SchoolLibrary/                      ← корен на хранилището
     ├── MainWindow.xaml(.cs)        меню + текущ екран
     ├── Themes/Styles.xaml          цветове и стилове
     ├── Models/                     Book, BookCopy, Reader, Loan, настройки
-    ├── Services/                   LibraryService, ILibraryRepository, DataStore,
-    │                               IAiSearchService, SeedData
+    ├── Services/                   LibraryService (3 файла), ILibraryRepository, DataStore,
+    │   │                           IAiSearchService, SeedData
+    │   └── Validation/             BookValidator, CopyValidator, ReaderValidator, Isbn, OperationResult
     ├── ViewModels/                 по един ViewModel на екран
     └── Views/                      по един XAML екран
+SchoolLibrary.Tests/                xUnit тестове (Етап 5)
 ```
 
 Правило за нов файл: **нов екран** = `XxxView.xaml` + `XxxViewModel.cs` + ред `DataTemplate` в `MainWindow.xaml` + ред в `MainViewModel.Create`.
@@ -127,16 +130,18 @@ SchoolLibrary/                      ← корен на хранилището
 
 ## 6. Сегашно състояние спрямо целта
 
-Архитектурата е завършена, но един елемент от модела още не се ползва:
+След Етап 5 моделът от схемата вече работи: заемането сочи към конкретен `BookCopy`.
 
 | Тема | Целеви модел | Какво има сега | План |
 |------|--------------|----------------|------|
-| Екземпляри | `Book` 1..* `BookCopy`, заемането сочи към `BookCopy` | Класът `BookCopy` и списъкът `LibraryData.Copies` съществуват, но са празни. Наличността се смята като `Book.TotalCopies` минус активните заемания. | **TD-01** в backlog: миграция към екземпляри с инвентарен номер |
-| Хранилище | Заменяемо през интерфейс | Интерфейсът `ILibraryRepository` и `DataStore` (JSON) са готови | SQLite – по желание, по-късно (**TD-07**) |
+| Екземпляри | `Book` 1..* `BookCopy`, заемането сочи към `BookCopy` | ✅ Всеки екземпляр има уникален инвентарен номер; `Loan.CopyId` сочи към него; наличността е броят екземпляри със статус „Наличен“ | – |
+| Валидация | Правилата на едно място | ✅ `Services/Validation/` – `BookValidator`, `CopyValidator`, `ReaderValidator`, `OperationResult` | – |
+| Версия на данните | Безопасно обновяване на файла | ✅ `LibraryData.SchemaVersion = 2`; по-стар файл се копира в `library.v{N}.bak` | – |
+| Хранилище | Заменяемо през интерфейс | `ILibraryRepository` + `DataStore` (JSON) | SQLite – по-късно (**TD-07**) |
 | ИИ | Истински модел през API | `LocalAiSearchService` (правила, без интернет) | **TD-06** |
-| Тестове | Автоматични тестове на `LibraryService` | Няма | **TD-02** |
+| Тестове | Автоматични тестове | ✅ Проект `SchoolLibrary.Tests` (xUnit): книги, екземпляри, читатели, заемане/връщане, запис | Търсене с ИИ, статистика |
 
-Причина да не мигрираме `BookCopy` веднага: работещата версия от Етап 3 заема и връща без грешка, а миграцията променя `Loan`, `LibraryService` и три екрана. По-безопасно е да се прави след като има тестове (**TD-02**), за да се види веднага ако нещо се счупи.
+`LibraryService` е `partial` клас в три файла: `LibraryService.cs` (заемане, връщане, търсене), `LibraryService.Books.cs` (книги и екземпляри), `LibraryService.Readers.cs` (читатели). Всяка операция по запис връща `OperationResult` със списък от грешки (поле + разбираемо съобщение на български), който екранът само показва. Подробности: [05_books_and_readers.md](05_books_and_readers.md).
 
 ---
 

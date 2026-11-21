@@ -5,38 +5,60 @@ namespace SchoolLibrary.Services;
 public sealed record ReturnResult(Book Book, Reader Reader, BookCondition Condition, int LateDays, bool BlockLifted);
 
 /// <summary>
-/// Цялата бизнес логика на библиотеката (BR-01 … BR-15 от Етап 2).
+/// Цялата бизнес логика на библиотеката (BR-01 … BR-15).
+/// Класът е разделен на три файла: този (четене и заемане/връщане),
+/// <c>LibraryService.Books.cs</c> (книги и екземпляри) и <c>LibraryService.Readers.cs</c> (читатели).
 /// Екраните не пазят правила – те само извикват този клас.
 /// </summary>
-public class LibraryService
+public partial class LibraryService
 {
     private static readonly char[] Separators =
         { ' ', '\t', ',', '.', ';', ':', '-', '–', '"', '„', '“', '(', ')', '!', '?' };
 
     private readonly ILibraryRepository _store;
     private readonly LibraryData _data;
+    private readonly Func<DateTime> _clock;
 
-    public LibraryService(ILibraryRepository store)
+    /// <param name="clock">Часовник. По подразбиране е днешната дата; в тестове се подава фиксирана.</param>
+    public LibraryService(ILibraryRepository store, Func<DateTime>? clock = null)
     {
         _store = store;
+        _clock = clock ?? (() => DateTime.Today);
         _data = store.Load();
     }
 
-    public DateTime Today => DateTime.Today;
+    public DateTime Today => _clock().Date;
     public LibrarySettings Settings => _data.Settings;
     public string? LastSaveError => _store.LastError;
 
     // ===== Четене =====
 
     public IReadOnlyList<Book> Books => _data.Books.Where(b => b.IsActive).OrderBy(b => b.Title).ToList();
-    public IReadOnlyList<Reader> Readers => _data.Readers.OrderBy(r => r.Id).ToList();
+
+    /// <summary>Активните читатели – за избор при заемане, връщане и вход.</summary>
+    public IReadOnlyList<Reader> Readers => _data.Readers.Where(r => r.IsActive).OrderBy(r => r.CardNumber).ToList();
+
+    /// <summary>Всички читатели, включително деактивираните – за екрана „Читатели“.</summary>
+    public IReadOnlyList<Reader> AllReaders => _data.Readers.OrderBy(r => r.CardNumber).ToList();
+
     public IReadOnlyList<Loan> AllLoans => _data.Loans;
     public IEnumerable<Loan> ActiveLoans => _data.Loans.Where(l => l.IsActive);
 
     public Book? GetBook(int id) => _data.Books.FirstOrDefault(b => b.Id == id);
     public Reader? GetReader(int id) => _data.Readers.FirstOrDefault(r => r.Id == id);
+    public BookCopy? GetCopy(int id) => _data.Copies.FirstOrDefault(c => c.Id == id);
 
-    public int Available(Book book) => book.TotalCopies - ActiveLoans.Count(l => l.BookId == book.Id);
+    public IReadOnlyList<BookCopy> CopiesOf(Book book) =>
+        _data.Copies.Where(c => c.BookId == book.Id).OrderBy(c => c.InventoryNumber).ToList();
+
+    /// <summary>Екземпляри, които могат да се заемат в момента.</summary>
+    public int Available(Book book) =>
+        _data.Copies.Count(c => c.BookId == book.Id && c.Status == CopyStatus.Available);
+
+    /// <summary>Екземпляри, с които библиотеката разполага (без загубените и списаните).</summary>
+    public int TotalCopies(Book book) =>
+        _data.Copies.Count(c => c.BookId == book.Id && c.Status is not (CopyStatus.Lost or CopyStatus.Withdrawn));
+
     public IReadOnlyList<Loan> LoansOf(Reader reader) => ActiveLoans.Where(l => l.ReaderId == reader.Id).ToList();
 
     public bool IsOverdue(Loan loan) => loan.IsActive && loan.DueDate.Date < Today;
@@ -51,6 +73,11 @@ public class LibraryService
     public IReadOnlyList<string> CheckLoan(Reader reader, Book book)
     {
         var problems = new List<string>();
+
+        if (!reader.IsActive)
+        {
+            problems.Add("Читателят е деактивиран и не може да заема книги.");
+        }
 
         if (book.ReferenceOnly)
         {
@@ -92,9 +119,17 @@ public class LibraryService
             throw new InvalidOperationException(string.Join(" ", problems));
         }
 
+        // Първият свободен екземпляр по инвентарен номер.
+        var copy = _data.Copies
+            .Where(c => c.BookId == book.Id && c.Status == CopyStatus.Available)
+            .OrderBy(c => c.InventoryNumber)
+            .First();
+        copy.Status = CopyStatus.OnLoan;
+
         var loan = new Loan
         {
             Id = NextId(_data.Loans.Select(l => l.Id)),
+            CopyId = copy.Id,
             BookId = book.Id,
             ReaderId = reader.Id,
             LoanedOn = Today,
@@ -116,66 +151,24 @@ public class LibraryService
 
         var book = GetBook(loan.BookId) ?? throw new InvalidOperationException("Книгата не е намерена.");
         var reader = GetReader(loan.ReaderId) ?? throw new InvalidOperationException("Читателят не е намерен.");
+        var copy = GetCopy(loan.CopyId) ?? throw new InvalidOperationException("Екземплярът не е намерен.");
 
         var late = DaysOverdue(loan); // преди да затворим заемането
 
         loan.ReturnedOn = Today;
         loan.Condition = condition;
 
-        // Повредено или загубено копие излиза от наличността (решението за обезщетение е извън системата).
-        if (condition != BookCondition.Good && book.TotalCopies > 0)
+        // Повреденият или загубеният екземпляр не се връща в наличността (решението за обезщетение е извън системата).
+        copy.Status = condition switch
         {
-            book.TotalCopies--;
-        }
+            BookCondition.Damaged => CopyStatus.Damaged,
+            BookCondition.Lost => CopyStatus.Lost,
+            _ => CopyStatus.Available,
+        };
 
         var lifted = late > 0 && !LoansOf(reader).Any(IsOverdue);
         Save();
         return new ReturnResult(book, reader, condition, late, lifted);
-    }
-
-    // ===== Каталог и читатели =====
-
-    public Book? FindDuplicate(string isbn, string title, string author) =>
-        _data.Books.FirstOrDefault(b =>
-            (isbn.Length > 0 && b.Isbn == isbn) ||
-            (b.Title.Equals(title, StringComparison.OrdinalIgnoreCase) &&
-             b.Author.Equals(author, StringComparison.OrdinalIgnoreCase)));
-
-    public Book AddBook(Book book)
-    {
-        book.Id = NextId(_data.Books.Select(b => b.Id));
-        _data.Books.Add(book);
-        Save();
-        return book;
-    }
-
-    /// <summary>Деактивира книга. Не е позволено, докато има неврънати копия.</summary>
-    public bool TryDeactivateBook(Book book, out string reason)
-    {
-        if (ActiveLoans.Any(l => l.BookId == book.Id))
-        {
-            reason = "Книгата има неврънати копия. Първо ги върнете.";
-            return false;
-        }
-
-        book.IsActive = false;
-        Save();
-        reason = "";
-        return true;
-    }
-
-    public Reader AddReader(string name, string className, ReaderRole role)
-    {
-        var reader = new Reader
-        {
-            Id = _data.Readers.Count == 0 ? 101 : _data.Readers.Max(r => r.Id) + 1,
-            Name = name,
-            ClassName = className,
-            Role = role,
-        };
-        _data.Readers.Add(reader);
-        Save();
-        return reader;
     }
 
     // ===== Търсене по думи (FR-18) =====
