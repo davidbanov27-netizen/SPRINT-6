@@ -23,6 +23,7 @@
 | [docs/02_requirements_and_backlog.md](docs/02_requirements_and_backlog.md) | MVP, изисквания, бизнес правила |
 | [docs/03_user_scenarios_and_prototype.md](docs/03_user_scenarios_and_prototype.md) | User stories, use cases, прототип, тест за използваемост |
 | [docs/04_architecture.md](docs/04_architecture.md) | **Архитектура**, компоненти, диаграми, екипна работа |
+| [docs/05_books_and_readers.md](docs/05_books_and_readers.md) | **Книги, екземпляри, читатели**: правила за валидация, тестове, демонстрация |
 | [docs/backlog.md](docs/backlog.md) | **Актуален backlog** със статуси |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Клонове, commit-и, pull request, Definition of Done |
 
@@ -45,9 +46,11 @@ SchoolLibrary/
 ├── Themes/Styles.xaml    цветове и стилове
 ├── Models/               Book, BookCopy, Reader, Loan, настройки
 ├── Services/             LibraryService, ILibraryRepository, DataStore,
-│                         IAiSearchService, SeedData
+│   │                     IAiSearchService, SeedData
+│   └── Validation/       валидатори и OperationResult
 ├── ViewModels/           по един ViewModel на екран
 └── Views/                по един XAML екран
+SchoolLibrary.Tests/      xUnit тестове
 docs/                     документи, диаграми, backlog, прототип
 ```
 
@@ -59,10 +62,17 @@ docs/                     документи, диаграми, backlog, про�
 
 ## Състояние
 
-Работи: вход по роля, каталог, читатели, заемане, връщане, просрочени, статистика, търсене, препоръки, „Моите книги“.
+Работи: вход по роля, каталог с добавяне/редактиране на книги и екземпляри (уникален инвентарен номер), читатели с уникален читателски номер, заемане, връщане, просрочени, статистика, търсене, препоръки, „Моите книги“.
 
-Още не е направено (виж [docs/backlog.md](docs/backlog.md)): парола, редактиране на книга,
-миграция към `BookCopy`, автоматични тестове, истински ИИ модел, удължаване и резервации.
+Още не е направено (виж [docs/backlog.md](docs/backlog.md)): парола, истински ИИ модел, удължаване и резервации.
+
+## Тестове
+
+Visual Studio: **Test → Run All Tests** (или Test Explorer). Команден ред: `dotnet test`.
+Какво се проверява: [docs/05_books_and_readers.md](docs/05_books_and_readers.md).
+
+> Ако преди това сте стартирали по-стара версия, файлът `%LocalAppData%\SchoolLibrary\library.json`
+> се копира в `library.v0.bak` и се зарежда ново примерно съдържание (схема v2).
 
 ## Работа в екип
 
