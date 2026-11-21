@@ -2,11 +2,12 @@ using SchoolLibrary.Models;
 
 namespace SchoolLibrary.Services;
 
-public sealed record ReturnResult(Book Book, Reader Reader, BookCondition Condition, int LateDays, bool BlockLifted);
+public sealed record ReturnResult(
+    Book Book, Reader Reader, BookCondition Condition, int LateDays, bool BlockLifted, string InventoryNumber = "");
 
 /// <summary>
 /// Цялата бизнес логика на библиотеката (BR-01 … BR-15).
-/// Класът е разделен на три файла: този (четене и заемане/връщане),
+/// Класът е разделен на четири файла: този (четене и търсене), <c>LibraryService.Loans.cs</c> (заемане и връщане),
 /// <c>LibraryService.Books.cs</c> (книги и екземпляри) и <c>LibraryService.Readers.cs</c> (читатели).
 /// Екраните не пазят правила – те само извикват този клас.
 /// </summary>
@@ -63,113 +64,6 @@ public partial class LibraryService
 
     public bool IsOverdue(Loan loan) => loan.IsActive && loan.DueDate.Date < Today;
     public int DaysOverdue(Loan loan) => IsOverdue(loan) ? (Today - loan.DueDate.Date).Days : 0;
-
-    public int LimitOf(Reader reader) =>
-        reader.Role == ReaderRole.Teacher ? Settings.TeacherLimit : Settings.StudentLimit;
-
-    // ===== Заемане (BR-01 … BR-06) =====
-
-    /// <summary>Връща причините, поради които заемането не е позволено. Празен списък = позволено.</summary>
-    public IReadOnlyList<string> CheckLoan(Reader reader, Book book)
-    {
-        var problems = new List<string>();
-
-        if (!reader.IsActive)
-        {
-            problems.Add("Читателят е деактивиран и не може да заема книги.");
-        }
-
-        if (book.ReferenceOnly)
-        {
-            problems.Add("Книгата е само за четене в библиотеката и не може да се изнася.");
-        }
-
-        if (Available(book) < 1)
-        {
-            problems.Add("Няма налично копие.");
-        }
-
-        var loans = LoansOf(reader);
-        var limit = LimitOf(reader);
-        if (loans.Count >= limit)
-        {
-            problems.Add($"Достигнат лимит от {limit} книги.");
-        }
-
-        var overdue = loans.FirstOrDefault(IsOverdue);
-        if (overdue != null)
-        {
-            problems.Add($"Читателят има просрочена книга: „{GetBook(overdue.BookId)?.Title}“ " +
-                         $"(срок {overdue.DueDate:dd.MM.yyyy}). Върнете я, за да заемете нова.");
-        }
-
-        if (loans.Any(l => l.BookId == book.Id))
-        {
-            problems.Add("Читателят вече има това заглавие.");
-        }
-
-        return problems;
-    }
-
-    public Loan CreateLoan(Reader reader, Book book)
-    {
-        var problems = CheckLoan(reader, book);
-        if (problems.Count > 0)
-        {
-            throw new InvalidOperationException(string.Join(" ", problems));
-        }
-
-        // Първият свободен екземпляр по инвентарен номер.
-        var copy = _data.Copies
-            .Where(c => c.BookId == book.Id && c.Status == CopyStatus.Available)
-            .OrderBy(c => c.InventoryNumber)
-            .First();
-        copy.Status = CopyStatus.OnLoan;
-
-        var loan = new Loan
-        {
-            Id = NextId(_data.Loans.Select(l => l.Id)),
-            CopyId = copy.Id,
-            BookId = book.Id,
-            ReaderId = reader.Id,
-            LoanedOn = Today,
-            DueDate = Today.AddDays(Settings.LoanDays),
-        };
-        _data.Loans.Add(loan);
-        Save();
-        return loan;
-    }
-
-    // ===== Връщане (BR-07, BR-09, BR-11, BR-13, BR-15) =====
-
-    public ReturnResult ReturnLoan(Loan loan, BookCondition condition)
-    {
-        if (!loan.IsActive)
-        {
-            throw new InvalidOperationException("Заемането вече е затворено.");
-        }
-
-        var book = GetBook(loan.BookId) ?? throw new InvalidOperationException("Книгата не е намерена.");
-        var reader = GetReader(loan.ReaderId) ?? throw new InvalidOperationException("Читателят не е намерен.");
-        var copy = GetCopy(loan.CopyId) ?? throw new InvalidOperationException("Екземплярът не е намерен.");
-
-        var late = DaysOverdue(loan); // преди да затворим заемането
-
-        loan.ReturnedOn = Today;
-        loan.Condition = condition;
-
-        // Повреденият или загубеният екземпляр не се връща в наличността (решението за обезщетение е извън системата).
-        copy.Status = condition switch
-        {
-            BookCondition.Damaged => CopyStatus.Damaged,
-            BookCondition.Lost => CopyStatus.Lost,
-            _ => CopyStatus.Available,
-        };
-
-        var lifted = late > 0 && !LoansOf(reader).Any(IsOverdue);
-        Save();
-        return new ReturnResult(book, reader, condition, late, lifted);
-    }
 
     // ===== Търсене по думи (FR-18) =====
 
