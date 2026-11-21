@@ -2,51 +2,75 @@ using SchoolLibrary.Models;
 
 namespace SchoolLibrary.Services;
 
-/// <summary>Примерни данни за първо стартиране. Датите са спрямо днешния ден.</summary>
+/// <summary>Примерни данни за първо стартиране. Датите са спрямо подадения ден.</summary>
 public static class SeedData
 {
     public static LibraryData Create(DateTime today)
     {
-        var data = new LibraryData();
+        var data = new LibraryData { SchemaVersion = LibraryData.CurrentSchemaVersion };
 
         data.Books.AddRange(new[]
         {
-            new Book { Id = 1, Title = "Под игото", Author = "Иван Вазов", Genre = "Роман", MinGrade = 8, MaxGrade = 12, TotalCopies = 3, Shelf = "А-12", Description = "Роман за Априлското въстание." },
-            new Book { Id = 2, Title = "Хари Потър и философския камък", Author = "Дж. К. Роулинг", Genre = "Фентъзи", MinGrade = 5, MaxGrade = 8, TotalCopies = 2, Shelf = "Б-03", Description = "Момче открива, че е магьосник." },
-            new Book { Id = 3, Title = "Островът на съкровищата", Author = "Р. Л. Стивънсън", Genre = "Приключения", MinGrade = 5, MaxGrade = 7, TotalCopies = 2, Shelf = "Б-07", Description = "Пирати, карта и съкровище." },
-            new Book { Id = 4, Title = "Тримата мускетари", Author = "Александър Дюма", Genre = "Приключения", MinGrade = 6, MaxGrade = 9, TotalCopies = 1, Shelf = "Б-09", Description = "Приключения във Франция през 17. век." },
-            new Book { Id = 5, Title = "Малкият принц", Author = "Антоан дьо Сент-Екзюпери", Genre = "Приказка", MinGrade = 3, MaxGrade = 7, TotalCopies = 2, Shelf = "В-01", Description = "Философска приказка за дружбата." },
-            new Book { Id = 6, Title = "Български тълковен речник", Author = "Колектив", Genre = "Справочник", MinGrade = 1, MaxGrade = 12, TotalCopies = 1, Shelf = "Р-01", Description = "Само за четене в библиотеката.", ReferenceOnly = true },
-            new Book { Id = 7, Title = "Хобитът", Author = "Дж. Р. Р. Толкин", Genre = "Фентъзи", MinGrade = 6, MaxGrade = 9, TotalCopies = 2, Shelf = "Б-04", Description = "Билбо тръгва на неочаквано пътешествие." },
-            new Book { Id = 8, Title = "Пипи Дългото чорапче", Author = "Астрид Линдгрен", Genre = "Приказка", MinGrade = 2, MaxGrade = 5, TotalCopies = 2, Shelf = "В-02", Description = "Най-силното момиче на света." },
-            new Book { Id = 9, Title = "Бай Ганьо", Author = "Алеко Константинов", Genre = "Роман", MinGrade = 9, MaxGrade = 12, TotalCopies = 2, Shelf = "А-14", Description = "Сатира за българина и Европа." },
+            new Book { Id = 1, Title = "Под игото", Author = "Иван Вазов", Genre = "Роман", MinGrade = 8, MaxGrade = 12, Shelf = "А-12", Description = "Роман за Априлското въстание." },
+            new Book { Id = 2, Title = "Хари Потър и философския камък", Author = "Дж. К. Роулинг", Genre = "Фентъзи", MinGrade = 5, MaxGrade = 8, Shelf = "Б-03", Description = "Момче открива, че е магьосник." },
+            new Book { Id = 3, Title = "Островът на съкровищата", Author = "Р. Л. Стивънсън", Genre = "Приключения", MinGrade = 5, MaxGrade = 7, Shelf = "Б-07", Description = "Пирати, карта и съкровище." },
+            new Book { Id = 4, Title = "Тримата мускетари", Author = "Александър Дюма", Genre = "Приключения", MinGrade = 6, MaxGrade = 9, Shelf = "Б-09", Description = "Приключения във Франция през 17. век." },
+            new Book { Id = 5, Title = "Малкият принц", Author = "Антоан дьо Сент-Екзюпери", Genre = "Приказка", MinGrade = 3, MaxGrade = 7, Shelf = "В-01", Description = "Философска приказка за дружбата." },
+            new Book { Id = 6, Title = "Български тълковен речник", Author = "Колектив", Genre = "Справочник", MinGrade = 1, MaxGrade = 12, Shelf = "Р-01", Description = "Само за четене в библиотеката.", ReferenceOnly = true },
+            new Book { Id = 7, Title = "Хобитът", Author = "Дж. Р. Р. Толкин", Genre = "Фентъзи", MinGrade = 6, MaxGrade = 9, Shelf = "Б-04", Description = "Билбо тръгва на неочаквано пътешествие." },
+            new Book { Id = 8, Title = "Пипи Дългото чорапче", Author = "Астрид Линдгрен", Genre = "Приказка", MinGrade = 2, MaxGrade = 5, Shelf = "В-02", Description = "Най-силното момиче на света." },
+            new Book { Id = 9, Title = "Бай Ганьо", Author = "Алеко Константинов", Genre = "Роман", MinGrade = 9, MaxGrade = 12, Shelf = "А-14", Description = "Сатира за българина и Европа." },
         });
+
+        // Колко екземпляра има всяко заглавие. Номерата са BK-00001, BK-00002 …
+        var copiesPerBook = new Dictionary<int, int>
+        {
+            [1] = 3, [2] = 2, [3] = 2, [4] = 1, [5] = 2, [6] = 1, [7] = 2, [8] = 2, [9] = 2,
+        };
+        var seq = 0;
+        foreach (var book in data.Books)
+        {
+            for (var n = 0; n < copiesPerBook[book.Id]; n++)
+            {
+                seq++;
+                data.Copies.Add(new BookCopy { Id = seq, BookId = book.Id, InventoryNumber = $"BK-{seq:D5}" });
+            }
+        }
 
         data.Readers.AddRange(new[]
         {
-            new Reader { Id = 101, Name = "Иван Петров", ClassName = "7Б", Role = ReaderRole.Student },
-            new Reader { Id = 102, Name = "Мария Георгиева", ClassName = "6А", Role = ReaderRole.Student },
-            new Reader { Id = 103, Name = "Георги Димитров", ClassName = "8В", Role = ReaderRole.Student },
-            new Reader { Id = 104, Name = "Елена Стоянова", ClassName = "Учител", Role = ReaderRole.Teacher },
+            new Reader { Id = 101, CardNumber = "RD-0101", Name = "Иван Петров", ClassName = "7Б", Role = ReaderRole.Student },
+            new Reader { Id = 102, CardNumber = "RD-0102", Name = "Мария Георгиева", ClassName = "6А", Role = ReaderRole.Student },
+            new Reader { Id = 103, CardNumber = "RD-0103", Name = "Георги Димитров", ClassName = "8В", Role = ReaderRole.Student },
+            new Reader { Id = 104, CardNumber = "RD-0104", Name = "Елена Стоянова", ClassName = "Учител", Role = ReaderRole.Teacher },
         });
 
-        // Активни заемания: dueOffset е колко дни от днес е срокът (отрицателно = просрочено).
-        Loan Active(int id, int book, int reader, int dueOffset) => new()
+        // Активно заемане: dueOffset е колко дни от днес е срокът (отрицателно = просрочено).
+        Loan Active(int id, int bookId, int readerId, int dueOffset)
         {
-            Id = id, BookId = book, ReaderId = reader,
-            LoanedOn = today.AddDays(dueOffset - 14),
-            DueDate = today.AddDays(dueOffset),
-        };
+            var copy = data.Copies.First(c => c.BookId == bookId && c.Status == CopyStatus.Available);
+            copy.Status = CopyStatus.OnLoan;
+            return new Loan
+            {
+                Id = id, CopyId = copy.Id, BookId = bookId, ReaderId = readerId,
+                LoanedOn = today.AddDays(dueOffset - 14),
+                DueDate = today.AddDays(dueOffset),
+            };
+        }
 
-        // Приключени заемания за статистиката и за препоръките.
-        Loan Done(int id, int book, int reader, int loanedDaysAgo, int keptDays) => new()
+        // Приключено заемане – за статистиката и за препоръките.
+        Loan Done(int id, int bookId, int readerId, int loanedDaysAgo, int keptDays)
         {
-            Id = id, BookId = book, ReaderId = reader,
-            LoanedOn = today.AddDays(-loanedDaysAgo),
-            DueDate = today.AddDays(-loanedDaysAgo + 14),
-            ReturnedOn = today.AddDays(-loanedDaysAgo + keptDays),
-            Condition = BookCondition.Good,
-        };
+            var copy = data.Copies.First(c => c.BookId == bookId);
+            return new Loan
+            {
+                Id = id, CopyId = copy.Id, BookId = bookId, ReaderId = readerId,
+                LoanedOn = today.AddDays(-loanedDaysAgo),
+                DueDate = today.AddDays(-loanedDaysAgo + 14),
+                ReturnedOn = today.AddDays(-loanedDaysAgo + keptDays),
+                Condition = BookCondition.Good,
+            };
+        }
 
         data.Loans.AddRange(new[]
         {
