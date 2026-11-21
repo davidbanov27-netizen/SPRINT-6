@@ -107,6 +107,7 @@ SchoolLibrary/                      ← корен на хранилището
 │   ├── 03_user_scenarios_and_prototype.md   Етап 3
 │   ├── 04_architecture.md          този документ
 │   ├── 05_books_and_readers.md     Етап 5: книги, екземпляри, читатели, тестове
+│   ├── 06_loans_and_returns.md     Етап 6: заемане и връщане
 │   ├── backlog.md                  актуален backlog
 │   ├── diagrams/                   схемите (.mmd = сорс, .png = за документи)
 │   └── prototype/prototype.html    кликаем прототип от Етап 3
@@ -115,7 +116,7 @@ SchoolLibrary/                      ← корен на хранилището
     ├── MainWindow.xaml(.cs)        меню + текущ екран
     ├── Themes/Styles.xaml          цветове и стилове
     ├── Models/                     Book, BookCopy, Reader, Loan, настройки
-    ├── Services/                   LibraryService (3 файла), ILibraryRepository, DataStore,
+    ├── Services/                   LibraryService (4 файла), ILibraryRepository, DataStore,
     │   │                           IAiSearchService, SeedData
     │   └── Validation/             BookValidator, CopyValidator, ReaderValidator, Isbn, OperationResult
     ├── ViewModels/                 по един ViewModel на екран
@@ -141,7 +142,7 @@ SchoolLibrary.Tests/                xUnit тестове (Етап 5)
 | ИИ | Истински модел през API | `LocalAiSearchService` (правила, без интернет) | **TD-06** |
 | Тестове | Автоматични тестове | ✅ Проект `SchoolLibrary.Tests` (xUnit): книги, екземпляри, читатели, заемане/връщане, запис | Търсене с ИИ, статистика |
 
-`LibraryService` е `partial` клас в три файла: `LibraryService.cs` (заемане, връщане, търсене), `LibraryService.Books.cs` (книги и екземпляри), `LibraryService.Readers.cs` (читатели). Всяка операция по запис връща `OperationResult` със списък от грешки (поле + разбираемо съобщение на български), който екранът само показва. Подробности: [05_books_and_readers.md](05_books_and_readers.md).
+`LibraryService` е `partial` клас в четири файла: `LibraryService.cs` (четене, търсене), `LibraryService.Loans.cs` (заемане и връщане – `Lend`, `Return`), `LibraryService.Books.cs` (книги и екземпляри), `LibraryService.Readers.cs` (читатели). Всяка операция по запис връща `OperationResult` със списък от грешки (поле + разбираемо съобщение на български), който екранът само показва. Подробности: [05_books_and_readers.md](05_books_and_readers.md).
 
 ---
 

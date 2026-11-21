@@ -13,6 +13,7 @@ public class ReturnViewModel : PageViewModel
     private IReadOnlyList<LoanRow> _loans = Array.Empty<LoanRow>();
     private LoanRow? _selectedLoan;
     private ConditionOption _selectedCondition;
+    private string _inventoryInput = "";
 
     public ReturnViewModel(LibraryService s)
     {
@@ -27,6 +28,7 @@ public class ReturnViewModel : PageViewModel
         _selectedCondition = Conditions[0];
 
         ConfirmCommand = new RelayCommand(Confirm, () => _selectedLoan != null);
+        FindByNumberCommand = new RelayCommand(FindByNumber);
         CancelCommand = new RelayCommand(() =>
         {
             ClearMessage();
@@ -38,6 +40,14 @@ public class ReturnViewModel : PageViewModel
     public IReadOnlyList<ConditionOption> Conditions { get; }
     public ICommand ConfirmCommand { get; }
     public ICommand CancelCommand { get; }
+    public ICommand FindByNumberCommand { get; }
+
+    /// <summary>Инвентарен номер за бързо връщане (като от четец на баркод).</summary>
+    public string InventoryInput
+    {
+        get => _inventoryInput;
+        set => Set(ref _inventoryInput, value ?? "");
+    }
 
     public Reader? SelectedReader
     {
@@ -93,6 +103,24 @@ public class ReturnViewModel : PageViewModel
         OnPropertyChanged(nameof(NoLoans));
     }
 
+    /// <summary>Намира заема по номера на екземпляра и го избира, за да остане само потвърждението.</summary>
+    private void FindByNumber()
+    {
+        ClearMessage();
+        var found = _s.FindActiveLoan(_inventoryInput);
+        if (!found.Success)
+        {
+            Show(MessageKind.Error, found.Summary);
+            return;
+        }
+
+        var loan = found.Value!;
+        SelectedReader = _s.GetReader(loan.ReaderId);
+        SelectedLoan = ActiveLoans.FirstOrDefault(r => r.Loan.Id == loan.Id);
+        InventoryInput = "";
+        OnPropertyChanged(nameof(InventoryInput));
+    }
+
     private void Confirm()
     {
         var row = _selectedLoan;
@@ -101,32 +129,36 @@ public class ReturnViewModel : PageViewModel
             return;
         }
 
-        try
+        var outcome = _s.Return(row.Loan, _selectedCondition.Value);
+        if (!outcome.Success)
         {
-            var result = _s.ReturnLoan(row.Loan, _selectedCondition.Value);
-
-            var text = $"Връщането е записано: „{result.Book.Title}“ ({_selectedCondition.Label}).";
-            if (result.LateDays > 0)
-            {
-                text += $" Закъснение: {result.LateDays} дни.";
-            }
-
-            if (result.Condition != BookCondition.Good)
-            {
-                text += " Копието е изключено от наличността.";
-            }
-
-            if (result.BlockLifted)
-            {
-                text += " Блокировката на читателя е снета.";
-            }
-
+            Show(MessageKind.Error, outcome.Summary);
             LoadLoans();
-            Show(result.LateDays > 0 ? MessageKind.Warning : MessageKind.Success, text);
+            return;
         }
-        catch (InvalidOperationException ex)
+
+        var result = outcome.Value!;
+        var text = $"Връщането е записано: „{result.Book.Title}“, екземпляр {result.InventoryNumber} ({_selectedCondition.Label}).";
+        if (result.LateDays > 0)
         {
-            Show(MessageKind.Error, ex.Message);
+            text += $" Закъснение: {result.LateDays} дни.";
         }
+
+        if (result.Condition != BookCondition.Good)
+        {
+            text += " Копието е изключено от наличността.";
+        }
+        else
+        {
+            text += " Екземплярът отново е наличен.";
+        }
+
+        if (result.BlockLifted)
+        {
+            text += " Блокировката на читателя е снета.";
+        }
+
+        LoadLoans();
+        Show(result.LateDays > 0 ? MessageKind.Warning : MessageKind.Success, text);
     }
 }

@@ -13,6 +13,8 @@ public class LoanViewModel : PageViewModel
     private Reader? _reader;
     private BookRow? _book;
     private IReadOnlyList<BookRow> _books = Array.Empty<BookRow>();
+    private IReadOnlyList<CopyChoice> _copyChoices = Array.Empty<CopyChoice>();
+    private CopyChoice? _copyChoice;
     private IReadOnlyList<string> _problems = Array.Empty<string>();
 
     public LoanViewModel(LibraryService s, INavigator nav)
@@ -33,6 +35,26 @@ public class LoanViewModel : PageViewModel
     {
         get => _books;
         private set => Set(ref _books, value);
+    }
+
+    public IReadOnlyList<CopyChoice> CopyChoices
+    {
+        get => _copyChoices;
+        private set => Set(ref _copyChoices, value);
+    }
+
+    /// <summary>Избраният екземпляр; „автоматично“ взема първия свободен.</summary>
+    public CopyChoice? SelectedCopyChoice
+    {
+        get => _copyChoice;
+        set
+        {
+            if (Set(ref _copyChoice, value))
+            {
+                ClearMessage();
+                Recompute();
+            }
+        }
     }
 
     public ICommand ConfirmCommand { get; }
@@ -60,6 +82,7 @@ public class LoanViewModel : PageViewModel
             if (Set(ref _book, value))
             {
                 ClearMessage();
+                LoadCopyChoices();
                 Recompute();
             }
         }
@@ -88,18 +111,38 @@ public class LoanViewModel : PageViewModel
     public bool HasProblems => _problems.Count > 0;
     public bool CanConfirm => _reader != null && _book != null && _problems.Count == 0;
     public string DueText => $"Всички проверки са преминати. Срок за връщане: {_s.Today.AddDays(_s.Settings.LoanDays):dd.MM.yyyy}";
+    public bool HasCopyChoices => _book != null;
+
+    private void LoadCopyChoices()
+    {
+        var choices = new List<CopyChoice>();
+        if (_book != null)
+        {
+            choices.Add(new CopyChoice(null, "Автоматично – първият свободен"));
+            choices.AddRange(_s.CopiesOf(_book.Book)
+                .Where(c => c.Status == CopyStatus.Available)
+                .Select(c => new CopyChoice(c, c.InventoryNumber)));
+        }
+
+        CopyChoices = choices;
+        _copyChoice = choices.FirstOrDefault();
+        OnPropertyChanged(nameof(SelectedCopyChoice));
+    }
 
     private void LoadBooks() =>
         Books = _s.Books.Select(b => RowFactory.ToBookRow(_s, b)).ToList();
 
     private void Recompute()
     {
-        _problems = _reader != null && _book != null ? _s.CheckLoan(_reader, _book.Book) : Array.Empty<string>();
+        _problems = _reader == null || _book == null
+            ? Array.Empty<string>()
+            : _copyChoice?.Copy is { } copy ? _s.CheckLoan(_reader, copy) : _s.CheckLoan(_reader, _book.Book);
         OnPropertyChanged(nameof(ReaderInfo));
         OnPropertyChanged(nameof(BookInfo));
         OnPropertyChanged(nameof(Problems));
         OnPropertyChanged(nameof(HasReader));
         OnPropertyChanged(nameof(HasBook));
+        OnPropertyChanged(nameof(HasCopyChoices));
         OnPropertyChanged(nameof(HasProblems));
         OnPropertyChanged(nameof(CanConfirm));
         OnPropertyChanged(nameof(DueText));
@@ -110,6 +153,7 @@ public class LoanViewModel : PageViewModel
         _reader = null;
         _book = null;
         LoadBooks();
+        LoadCopyChoices();
         OnPropertyChanged(nameof(SelectedReader));
         OnPropertyChanged(nameof(SelectedBook));
         Recompute();
@@ -125,15 +169,18 @@ public class LoanViewModel : PageViewModel
         var reader = _reader;
         var title = _book.Title;
 
-        try
+        var result = _copyChoice?.Copy is { } copy ? _s.Lend(reader, copy) : _s.Lend(reader, _book.Book);
+        if (!result.Success)
         {
-            var loan = _s.CreateLoan(reader, _book.Book);
-            Reset();
-            Show(MessageKind.Success, $"Заемането е записано: „{title}“ → {reader.Name}. Срок: {loan.DueDate:dd.MM.yyyy}.");
+            Show(MessageKind.Error, result.Summary);
+            Recompute();
+            return;
         }
-        catch (InvalidOperationException ex)
-        {
-            Show(MessageKind.Error, ex.Message);
-        }
+
+        var loan = result.Value!;
+        var number = _s.GetCopy(loan.CopyId)?.InventoryNumber ?? "";
+        Reset();
+        Show(MessageKind.Success,
+            $"Заемането е записано: „{title}“ (екземпляр {number}) → {reader.Name}. Срок: {loan.DueDate:dd.MM.yyyy}.");
     }
 }
